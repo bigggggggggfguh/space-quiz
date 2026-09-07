@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>🌌 OLA Quiz · Yinka Micro App</title>
+    <style>
+        /* ── reset & base ── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100dvh;
+            background: radial-gradient(ellipse at 30% 20%, #0b0e1a, #03050b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            margin: 0;
+        }
+
+        /* ── card container ── */
+        .quiz-card {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(12, 16, 30, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(120, 160, 255, 0.15);
+            border-radius: 40px;
+            padding: 32px 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(90, 140, 255, 0.05) inset;
+            transition: box-shadow 0.3s;
+            position: relative;
+        }
+
+        /* ── screens (show/hide via JS) ── */
+        .screen {
+            display: none;
+            animation: fadeSlide 0.45s ease forwards;
+        }
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeSlide {
+            0% {
+                opacity: 0;
+                transform: translateY(14px) scale(0.97);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ── start screen ── */
+        .start-title {
+            font-size: 2.6rem;
+            font-weight: 700;
+            text-align: center;
+            background: linear-gradient(135deg, #c0d6ff, #7aa9ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .start-sub {
+            text-align: center;
+            color: rgba(200, 215, 255, 0.6);
+            font-size: 1.05rem;
+            margin-bottom: 28px;
+            font-weight: 400;
+        }
+        .start-planet {
+            text-align: center;
+            font-size: 4.2rem;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 0 30px rgba(100, 160, 255, 0.25));
+        }
+        .btn-start {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 60px;
+            background: linear-gradient(135deg, #ff3b3b, #ff4e54);
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.25s;
+            box-shadow: 0 6px 24px rgba(60, 110, 255, 0.3);
+            letter-spacing: 0.3px;
+        }
+        .btn-start:active {
+            transform: scale(0.96);
+        }
+        .btn-start:hover {
+            box-shadow: 0 8px 32px rgba(60, 110, 255, 0.5);
+        }
+
+        /* ── progress bar ── */
+        .progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .progress-track {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #5b8eff, #a77aff);
+            border-radius: 12px;
+            transition: width 0.5s ease;
+        }
+        .progress-label {
+            color: rgba(200, 215, 255, 0.5);
+            font-size: 0.85rem;
+            font-weight: 500;
+            min-width: 44px;
+            text-align: right;
+        }
+
+        /* ── question area ── */
+        .q-number {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(160, 190, 255, 0.4);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        .q-text {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: #e6edff;
+            line-height: 1.4;
+            margin-bottom: 24px;
+            min-height: 3.2rem;
+        }
+
+        /* ── answer buttons ── */
+        .answers {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ans-btn {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-align: left;
+            border: 1.5px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.04);
+            color: #d0ddff;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, transform 0.1s, box-shadow 0.3s;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+        }
+        .ans-btn:active {
+            transform: scale(0.98);
+        }
+        .ans-btn:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(120, 170, 255, 0.2);
+        }
+
+        /* ── states: selected / correct / wrong ── */
+        .ans-btn.selected {
+            border-color: rgba(120, 170, 255, 0.5);
+            background: rgba(60, 120, 255, 0.15);
+        }
+        .ans-btn.correct {
+            border-color: #66ffb3;
+            background: rgba(80, 255, 160, 0.12);
+            box-shadow: 0 0 24px rgba(80, 255, 160, 0.25), 0 0 60px rgba(80, 255, 160, 0.06);
+            color: #d4ffea;
+        }
+        .ans-btn.wrong {
+            border-color: rgba(255, 80, 80, 0.3);
+            background: rgba(255, 60, 60, 0.08);
+            opacity: 0.7;
+        }
+        .ans-btn:disabled {
+            cursor: default;
+            opacity: 0.7;
+            transform: none !important;
+        }
+        .ans-btn.correct:disabled {
+            opacity: 1;
+        }
+
+        /* ── next button ── */
+        .btn-next {
+            display: none;
+            width: 100%;
+            padding: 16px;
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 60px;
+            background: linear-gradient(135deg, #3b72ff, #6b4eff);
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.25s;
+            box-shadow: 0 4px 20px rgba(60, 110, 255, 0.25);
+        }
+        .btn-next:active {
+            transform: scale(0.96);
+        }
+        .btn-next.show {
+            display: block;
+            animation: fadeSlide 0.3s ease;
+        }
+
+        /* ── results screen ── */
+        .result-icon {
+            text-align: center;
+            font-size: 4.8rem;
+            margin-bottom: 6px;
+            filter: drop-shadow(0 0 40px rgba(100, 200, 255, 0.15));
+        }
+        .result-score {
+            text-align: center;
+            font-size: 3.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c0d6ff, #7aa9ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -1px;
+            line-height: 1.2;
+        }
+        .result-pct {
+            text-align: center;
+            font-size: 1.1rem;
+            color: rgba(200, 215, 255, 0.5);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .result-msg {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #c8d8ff;
+            padding: 12px 0 20px;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+        .result-detail {
+            text-align: center;
+            color: rgba(200, 215, 255, 0.3);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .btn-restart {
+            display: block;
+            width: 100%;
+            padding: 18px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 60px;
+            background: linear-gradient(135deg, #3b72ff, #6b4eff);
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.25s;
+            box-shadow: 0 6px 24px rgba(60, 110, 255, 0.3);
+        }
+        .btn-restart:active {
+            transform: scale(0.96);
+        }
+
+        /* ── mobile tune ── */
+        @media (max-width: 480px) {
+            .quiz-card {
+                padding: 24px 18px;
+                border-radius: 32px;
+            }
+            .start-title {
+                font-size: 2rem;
+            }
+            .q-text {
+                font-size: 1.15rem;
+            }
+            .ans-btn {
+                padding: 14px 16px;
+                font-size: 0.95rem;
+                border-radius: 16px;
+            }
+            .result-score {
+                font-size: 2.8rem;
+            }
+            .start-planet {
+                font-size: 3.4rem;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .quiz-card {
+                padding: 18px 12px;
+            }
+            .q-text {
+                font-size: 1rem;
+            }
+            .ans-btn {
+                padding: 12px 14px;
+                font-size: 0.88rem;
+            }
+        }
+
+        /* ── subtle extras ── */
+        .glow-spacer {
+            height: 4px;
+        }
+        .tag {
+            text-align: center;
+            margin-top: 18px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.07);
+            letter-spacing: 0.5px;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-card" role="main" aria-label="Space Quiz">
+
+        <!-- ═══ START SCREEN ═══ -->
+        <div id="screenStart" class="screen active">
+            <div class="start-planet">🪐</div>
+            <h1 class="start-title">Space Quiz</h1>
+            <p class="start-sub">5 cosmic questions · see your score</p>
+            <button class="btn-start" id="btnStart">🚀 Launch</button>
+            <div class="tag">vibe micro app · 🌙</div>
+        </div>
+
+        <!-- ═══ QUIZ SCREEN ═══ -->
+        <div id="screenQuiz" class="screen">
+            <!-- progress -->
+            <div class="progress-wrap">
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill" style="width:0%;"></div>
+                </div>
+                <span class="progress-label" id="progressLabel">1/5</span>
+            </div>
+
+            <!-- question -->
+            <div class="q-number" id="qNumber">QUESTION 1</div>
+            <div class="q-text" id="qText">Loading…</div>
+
+            <!-- answers -->
+            <div class="answers" id="answersContainer"></div>
+
+            <!-- next button -->
+            <button class="btn-next" id="btnNext">Next →</button>
+        </div>
+
+        <!-- ═══ RESULTS SCREEN ═══ -->
+        <div id="screenResults" class="screen">
+            <div class="result-icon" id="resultIcon">🌠</div>
+            <div class="result-score" id="resultScore">0%</div>
+            <div class="result-pct" id="resultPct">0 / 5 correct</div>
+            <div class="result-msg" id="resultMsg">Great job!</div>
+            <div class="result-detail" id="resultDetail">✨</div>
+            <button class="btn-restart" id="btnRestart">🔄 Play Again</button>
+            <div class="tag">✨ space vibes only</div>
+        </div>
+
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // ─── DATA ────────────────────────────────────────────────
+            const questions = [{
+                question: 'What is the largest planet in our solar system?',
+                options: ['Saturn', 'Jupiter', 'Neptune', 'Uranus'],
+                correct: 1
+            }, {
+                question: 'Which planet is known as the Red Planet?',
+                options: ['Venus', 'Mercury', 'Mars', 'Jupiter'],
+                correct: 2
+            }, {
+                question: 'What is the closest star to Earth?',
+                options: ['Proxima Centauri', 'Alpha Centauri A', 'The Sun', 'Sirius'],
+                correct: 2
+            }, {
+                question: 'Which planet has the most moons?',
+                options: ['Jupiter', 'Saturn', 'Uranus', 'Neptune'],
+                correct: 1
+            }, {
+                question: 'What is the name of the galaxy we live in?',
+                options: ['Andromeda', 'Milky Way', 'Triangulum', 'Whirlpool'],
+                correct: 1
+            }];
+
+            const TOTAL = questions.length;
+
+            // ─── DOM refs ────────────────────────────────────────────
+            const screenStart = document.getElementById('screenStart');
+            const screenQuiz = document.getElementById('screenQuiz');
+            const screenResults = document.getElementById('screenResults');
+
+            const btnStart = document.getElementById('btnStart');
+            const btnNext = document.getElementById('btnNext');
+            const btnRestart = document.getElementById('btnRestart');
+
+            const progressFill = document.getElementById('progressFill');
+            const progressLabel = document.getElementById('progressLabel');
+            const qNumber = document.getElementById('qNumber');
+            const qText = document.getElementById('qText');
+            const answersContainer = document.getElementById('answersContainer');
+
+            const resultIcon = document.getElementById('resultIcon');
+            const resultScore = document.getElementById('resultScore');
+            const resultPct = document.getElementById('resultPct');
+            const resultMsg = document.getElementById('resultMsg');
+            const resultDetail = document.getElementById('resultDetail');
+
+            // ─── state ──────────────────────────────────────────────
+            let currentIndex = 0;
+            let score = 0;
+            let answered = false;
+            let quizData = [];
+
+            // ─── utils ──────────────────────────────────────────────
+            function shuffleArray(arr) {
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            // ─── screen switcher ────────────────────────────────────
+            function showScreen(screenId) {
+                [screenStart, screenQuiz, screenResults].forEach(s => s.classList.remove('active'));
+                document.getElementById(screenId).classList.add('active');
+            }
+
+            // ─── build quiz data (shuffle options, track correct) ──
+            function buildQuiz() {
+                quizData = questions.map(q => {
+                    const correctAnswer = q.options[q.correct];
+                    const shuffled = shuffleArray([...q.options]);
+                    const newCorrectIndex = shuffled.indexOf(correctAnswer);
+                    return {
+                        question: q.question,
+                        options: shuffled,
+                        correctIndex: newCorrectIndex
+                    };
+                });
+            }
+
+            // ─── render question ────────────────────────────────────
+            function renderQuestion(index) {
+                const q = quizData[index];
+                if (!q) return;
+
+                answered = false;
+                btnNext.classList.remove('show');
+
+                // progress
+                const pct = ((index) / TOTAL) * 100;
+                progressFill.style.width = pct + '%';
+                progressLabel.textContent = `${index + 1}/${TOTAL}`;
+
+                qNumber.textContent = `QUESTION ${index + 1}`;
+                qText.textContent = q.question;
+
+                // clear & build buttons
+                answersContainer.innerHTML = '';
+                q.options.forEach((opt, i) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'ans-btn';
+                    btn.textContent = opt;
+                    btn.dataset.index = i;
+                    btn.addEventListener('click', onAnswerClick);
+                    answersContainer.appendChild(btn);
+                });
+            }
+
+            // ─── answer click handler ──────────────────────────────
+            function onAnswerClick(e) {
+                if (answered) return;
+                const btn = e.currentTarget;
+                const selectedIndex = parseInt(btn.dataset.index);
+                const q = quizData[currentIndex];
+                const isCorrect = selectedIndex === q.correctIndex;
+
+                // mark answered
+                answered = true;
+
+                // disable all buttons
+                const allBtns = answersContainer.querySelectorAll('.ans-btn');
+                allBtns.forEach(b => b.disabled = true);
+
+                // highlight correct & wrong
+                allBtns.forEach((b, i) => {
+                    if (i === q.correctIndex) {
+                        b.classList.add('correct');
+                    } else if (i === selectedIndex && !isCorrect) {
+                        b.classList.add('wrong');
+                    }
+                    if (i === selectedIndex) {
+                        b.classList.add('selected');
+                    }
+                });
+
+                // score
+                if (isCorrect) score += 1;
+
+                // show next button
+                btnNext.classList.add('show');
+                if (currentIndex === TOTAL - 1) {
+                    btnNext.textContent = '🎯 See Results';
+                } else {
+                    btnNext.textContent = 'Next →';
+                }
+            }
+
+            // ─── next question or results ──────────────────────────
+            function goNext() {
+                if (!answered) return;
+
+                if (currentIndex === TOTAL - 1) {
+                    showResults();
+                    return;
+                }
+
+                currentIndex++;
+                renderQuestion(currentIndex);
+            }
+
+            // ─── show results ──────────────────────────────────────
+            function showResults() {
+                const pct = Math.round((score / TOTAL) * 100);
+                const correctCount = score;
+                const total = TOTAL;
+
+                // progress full
+                progressFill.style.width = '100%';
+                progressLabel.textContent = `${total}/${total}`;
+
+                // fun message & icon
+                let icon, msg, detail;
+                if (pct === 100) {
+                    icon = '🏆';
+                    msg = 'Perfect score! You\'re a true astronaut!';
+                    detail = '🧠 stellar brain · cosmic genius';
+                } else if (pct >= 80) {
+                    icon = '🚀';
+                    msg = 'Almost interstellar! Incredible!';
+                    detail = '⭐ you know your space stuff';
+                } else if (pct >= 60) {
+                    icon = '🌙';
+                    msg = 'Solid orbit! You\'re getting there!';
+                    detail = '🪐 keep exploring';
+                } else if (pct >= 40) {
+                    icon = '🛸';
+                    msg = 'Not lost in space, but close!';
+                    detail = '🔭 time to hit the books';
+                } else {
+                    icon = '👾';
+                    msg = 'Keep bombing, keep bombing!';
+                    detail = '🌌 NO food for lazy man ';
+                }
+
+                resultIcon.textContent = icon;
+                resultScore.textContent = pct + '%';
+                resultPct.textContent = `${correctCount} / ${total} correct`;
+                resultMsg.textContent = msg;
+                resultDetail.textContent = detail;
+
+                showScreen('screenResults');
+            }
+
+            // ─── start / restart ───────────────────────────────────
+            function startQuiz() {
+                score = 0;
+                currentIndex = 0;
+                answered = false;
+                buildQuiz();
+                renderQuestion(0);
+                showScreen('screenQuiz');
+            }
+
+            function restartQuiz() {
+                startQuiz();
+            }
+
+            // ─── events ────────────────────────────────────────────
+            btnStart.addEventListener('click', startQuiz);
+            btnNext.addEventListener('click', goNext);
+            btnRestart.addEventListener('click', restartQuiz);
+
+            // ─── keyboard shortcut: Enter to start/next/restart ────
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    if (screenStart.classList.contains('active')) {
+                        btnStart.click();
+                    } else if (screenQuiz.classList.contains('active') && btnNext.classList.contains('show')) {
+                        btnNext.click();
+                    } else if (screenResults.classList.contains('active')) {
+                        btnRestart.click();
+                    }
+                }
+            });
+
+            // ─── init: show start ──────────────────────────────────
+            showScreen('screenStart');
+
+        })();
+    </script>
+
+</body>
+</html>
